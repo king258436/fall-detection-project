@@ -1,0 +1,47 @@
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+env/
+ENV/
+venv/
+pip-wheel-metadata/
+
+# VSCode remote & local settings
+.vscode/
+.vscode-server/
+
+# System files
+.DS_Store
+nohup.out
+*.log
+.wget-hsts
+.viminfo
+
+# Database files
+*.db
+*.sqlite3
+*.sqlite
+
+# User history and credentials
+.bash_history
+.python_history
+.ssh/
+.env
+.env.*
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# OS-generated
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PyInstaller
+*.spec

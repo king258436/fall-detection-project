@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>낙상 감지 갤러리</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fa;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #4A90E2;
+      color: white;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+
+    nav {
+      margin-top: 10px;
+    }
+
+    .stats-link {
+      display: inline-block;
+      background-color: #ffffff;
+      color: #4A90E2;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      border: 2px solid #ffffff;
+      transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+    }
+
+    .stats-link:hover {
+      background-color: white;
+      color: #4A90E2;
+      border-color: #4A90E2;
+    }
+
+    .group {
+      margin: 40px auto;
+      max-width: 1200px;
+      padding: 0 20px;
+    }
+
+    .group h2 {
+      margin-bottom: 20px;
+      color: #333;
+      border-bottom: 2px solid #4A90E2;
+      padding-bottom: 5px;
+    }
+
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .image-card {
+      background-color: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+      padding-bottom: 10px;
+      text-align: center; /* (수정) 내부 텍스트 가운데 정렬을 위해 추가 */
+    }
+
+    .image-card:hover {
+      transform: scale(1.02);
+    }
+    
+    /* ★ 1. (추가) 감지 시각 스타일 ★ */
+    .timestamp {
+        font-size: 14px;
+        color: #555;
+        margin: 12px 0 8px 0; /* 위아래 여백 조정 */
+        font-weight: 500;
+    }
+
+    .image-card img {
+      width: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    .memo-form {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 10px;
+      gap: 8px;
+      padding: 0 10px; /* 좌우 여백 추가 */
+    }
+
+    .memo-form input {
+      padding: 6px 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 70%;
+    }
+
+    .memo-form button {
+      padding: 6px 12px;
+      background-color: #4A90E2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .memo-form button:hover {
+      background-color: #357ABD;
+    }
+
+    .memo-status {
+      text-align: center;
+      color: green;
+      font-size: 13px;
+      margin-top: 4px;
+      height: 1em; /* 상태 메시지가 없을 때도 공간 유지 */
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+    }
+
+    .modal-content {
+      margin: 5% auto;
+      display: block;
+      max-width: 80%;
+      border-radius: 10px;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      color: white;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media screen and (max-width: 600px) {
+      .modal-content {
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>낙상 감지 이미지 갤러리</h1>
+    <nav>
+      <a href="/stats" class="stats-link">📊 통계 보기</a>
+    </nav>
+  </header>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <label for="start-date">시작 날짜: </label>
+    <input type="date" id="start-date">
+    <label for="end-date" style="margin-left: 10px;">종료 날짜: </label>
+    <input type="date" id="end-date">
+    <button onclick="applyDateFilter()" style="margin-left: 10px; padding: 5px 10px;">🔍 필터 적용</button>
+  </div>
+
+  <div id="gallery"></div>
+
+  <div id="modal" class="modal" onclick="closeModal()">
+    <span class="modal-close">&times;</span>
+    <img class="modal-content" id="modal-img">
+  </div>
+
+  <script>
+    let allData = [];
+
+    function openModal(url) {
+      const modal = document.getElementById("modal");
+      const modalImg = document.getElementById("modal-img");
+      modal.style.display = "block";
+      modalImg.src = url;
+    }
+
+    function closeModal() {
+      document.getElementById("modal").style.display = "none";
+    }
+
+    document.querySelector(".modal-close").onclick = closeModal;
+
+    function saveMemo(event, url, index) {
+      event.preventDefault();
+      const input = document.getElementById(`memo-input-${index}`);
+      const memo = input.value;
+
+      fetch('/memo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, memo })
+      })
+      .then(res => res.json())
+      .then(data => {
+        const status = document.getElementById(`memo-status-${index}`);
+        if (data.status === 'ok') {
+          status.innerText = '✅ 저장 완료!';
+          setTimeout(() => status.innerText = '', 2000);
+        }
+      });
+    }
+
+    function loadGallery(data) {
+      const container = document.getElementById('gallery');
+      container.innerHTML = '';
+      const grouped = {};
+
+      data.forEach(item => {
+        const date = item.timestamp.split('_')[0];
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(item);
+      });
+
+      let index = 0;
+      for (const date in grouped) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        groupDiv.innerHTML = `<h2>${date}</h2><div class="gallery-grid"></div>`;
+        const grid = groupDiv.querySelector('.gallery-grid');
+
+        grouped[date].forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'image-card';
+          
+          /* ★ 2. (수정) 카드 내부에 시각 정보 추가 ★ */
+          div.innerHTML = `
+            <p class="timestamp">${item.formatted_timestamp}</p>
+            <img src="${item.url}" alt="낙상 이미지" onclick="openModal('${item.url}')">
+            <form class="memo-form" onsubmit="saveMemo(event, '${item.url}', ${index})">
+              <input type="text" id="memo-input-${index}" value="${item.memo || ''}" placeholder="메모 입력..." />
+              <button type="submit">저장</button>
+            </form>
+            <div class="memo-status" id="memo-status-${index}"></div>
+          `;
+          grid.appendChild(div);
+          index++;
+        });
+
+        container.appendChild(groupDiv);
+      }
+
+      if (index === 0) {
+        container.innerHTML = `<p style="text-align:center; color:gray;">해당 기간에 감지된 이미지가 없습니다.</p>`;
+      }
+    }
+
+    function applyDateFilter() {
+      const start = document.getElementById('start-date').value;
+      const end = document.getElementById('end-date').value;
+
+      if (!start || !end) {
+        alert('시작일과 종료일을 모두 선택해주세요.');
+        return;
+      }
+
+      const filtered = allData.filter(item => {
+        const date = item.timestamp.split('_')[0];
+        return date >= start && date <= end;
+      });
+
+      loadGallery(filtered);
+    }
+
+    window.onload = () => {
+      fetch('/gallery')
+        .then(res => res.json())
+        .then(data => {
+          allData = data; // .reverse() 제거. 백엔드에서 이미 최신순으로 정렬했기 때문
+
+          if (data.length > 0) {
+            const today = new Date();
+            const start = new Date(today);
+            start.setDate(start.getDate() - 6); // 7일 범위
+            const format = d => d.toISOString().split('T')[0];
+            
+            document.getElementById('start-date').value = format(start);
+            document.getElementById('end-date').value = format(today);
+          }
+
+          applyDateFilter();
+        });
+    };
+  </script>
+</body>
+</html>

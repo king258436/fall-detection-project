@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>업로드 통계</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 10px;
+      background-color: #ffffff;
+      color: #4A90E2;
+      text-decoration: none;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      border: 2px solid #4A90E2;
+      transition: background-color 0.3s, color 0.3s;
+    }
+
+    .back-link:hover {
+      background-color: #4A90E2;
+      color: white;
+    }
+
+    canvas {
+      max-width: 800px;
+      margin: 40px auto;
+    }
+
+    h1 {
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>📊 날짜별 낙상 이미지 업로드 통계</h1>
+  <a href="/" class="back-link">← 갤러리로 돌아가기</a>
+
+  <canvas id="uploadChart"></canvas>
+
+  <script>
+    fetch('/stats/data')
+      .then(res => res.json())
+      .then(data => {
+        const ctx = document.getElementById('uploadChart').getContext('2d');
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.labels,
+            datasets: [{
+              label: '업로드된 이미지 수',
+              data: data.counts,
+              backgroundColor: 'rgba(75, 192, 192, 0.6)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              x: { title: { display: true, text: '날짜' } },
+              y: { beginAtZero: true, title: { display: true, text: '이미지 수' } }
+            }
+          }
+        });
+      });
+  </script>
+</body>
+</html>
+
